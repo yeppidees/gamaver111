@@ -3,429 +3,263 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🍭 핑글글 V29</title>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum:wght@400;700&display=swap" rel="stylesheet">
+    <title>뽕빨 방탈출</title>
     <style>
-        :root { --pink: #ffafcc; --blue: #a2d2ff; --yellow: #ffde59; --mint: #b9fbc0; --red: #ff4d4d; --gray: #d1d8e0; --dark: #1e272e; }
-        * { font-family: 'Gowun Dodum', sans-serif; box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
-        body { background: #fdfdfd; height: 100vh; display: flex; flex-direction: column; overflow: hidden; color: #000; transition: 0.5s; }
-        
-        /* Header */
-        #top-banner { background: #000; color: #fff; padding: 12px; text-align: center; border-bottom: 4px solid var(--yellow); font-family: 'Jua'; font-size: 16px; flex-shrink: 0; z-index: 10; }
-        
-        /* Main Layout */
-        #wrapper { flex: 1; display: flex; overflow: hidden; }
-        
-        /* Sidebar */
-        #sidebar { width: 280px; background: #fff; border-right: 2px solid #eee; display: flex; flex-direction: column; padding: 10px; flex-shrink: 0; }
-        #user-list { flex: 1; overflow-y: auto; }
-        .user-tag { padding: 10px; border: 2px solid #eee; border-radius: 15px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: bold; background: #fff; cursor: grab; }
-        .user-tag.active-turn { border: 3px solid var(--pink); background: #fff0f5; }
-        .user-tag.is-dead { background: #f0f0f0 !important; opacity: 0.6; color: #888; border-color: #ccc; filter: grayscale(1); }
-        .user-tag.is-dead b { text-decoration: line-through; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { background: #000; color: #0f0; font-family: 'Courier New', 'Malgun Gothic', monospace; margin: 0; padding: 10px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        #status-bar { display: flex; justify-content: space-between; font-size: 11px; border-bottom: 2px solid #040; padding: 8px; background: #010; }
+        #log-container { flex: 1; overflow-y: auto; padding: 15px; margin: 10px 0; background: rgba(0, 5, 0, 0.95); border: 1px solid #050; border-radius: 5px; box-shadow: inset 0 0 30px #020; }
+        #log { font-size: 14px; line-height: 1.8; color: #bbb; }
 
-        /* Game Area */
-        #game-view { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; align-items: center; background: #f8f9fa; }
-        .game-card { background: #fff; width: 100%; max-width: 800px; padding: 20px; border-radius: 30px; border: 4px solid #000; min-height: 550px; position: relative; box-shadow: 8px 8px 0 rgba(0,0,0,0.05); }
+        .boss-msg { color: #f0f; font-weight: bold; background: rgba(255, 0, 255, 0.15); padding: 5px; display: block; }
+        .erotic { color: #ff69b4; border-left: 3px solid #ff69b4; padding-left: 10px; margin: 10px 0; font-weight: bold; }
+        .critical { color: #f00; font-weight: bold; text-shadow: 0 0 10px #f00; animation: shake 0.5s infinite; }
+        .hint-box { color: #ff0; background: #330; padding: 2px 5px; animation: fadeOut 3s forwards; display: inline-block; }
         
-        /* Board */
-        #board { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 10px; }
-        .tile { aspect-ratio: 1; border: 2px solid #000; border-radius: 12px; font-size: 14px; font-weight: bold; background: #fff; position: relative; display: flex; align-items: center; justify-content: center; text-align: center; padding: 5px; cursor: pointer; }
-        .piece-container { position: absolute; inset: 0; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: center; padding: 4px; pointer-events: none; gap: 3px; }
-        .piece { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #000; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        .piece-name { position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%); font-size: 8px; background: #000; color: #fff; padding: 2px 4px; border-radius: 3px; white-space: nowrap; }
-
-        /* Chat Area */
-        #chat-view { width: 320px; border-left: 2px solid #eee; display: flex; flex-direction: column; background: #fff; flex-shrink: 0; }
-        #messages { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 6px; background: #fafafa; }
-        .msg { padding: 8px 12px; border-radius: 15px; font-size: 13px; max-width: 85%; border: 1.5px solid #ddd; background: #fff; position: relative; }
-        .msg.sys { background: var(--yellow); border: 2px solid #000; align-self: center; font-size: 11px; font-weight: bold; }
-
-        /* Responsive */
-        @media (max-width: 900px) {
-            #wrapper { flex-direction: column; }
-            #sidebar { width: 100%; height: 140px; border-right: none; border-bottom: 2px solid #eee; }
-            #chat-view { width: 100%; height: 240px; border-left: none; border-top: 2px solid #eee; }
-            #board { grid-template-columns: repeat(4, 1fr); }
-            .tile { font-size: 12px; }
-        }
-
-        /* Common Elements */
-        button { border: 2.5px solid #000; border-radius: 12px; padding: 8px 12px; font-family: 'Jua'; font-size: 14px; cursor: pointer; background: #fff; transition: 0.2s; }
-        button:active { transform: scale(0.95); }
-        .btn-y { background: var(--yellow); } .btn-b { background: var(--blue); } .btn-r { background: var(--red); color: #fff; }
-        input { border: 2.5px solid #000; padding: 8px; border-radius: 10px; font-size: 14px; }
-        .game-section { display: none; flex-direction: column; height: 100%; }
-        .game-section.active { display: flex; }
+        #controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; min-height: 140px; }
+        button { background: #010; color: #0f0; border: 1px solid #0a0; border-radius: 4px; padding: 12px 5px; font-size: 13px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #050; }
+        button:active { background: #0f0; color: #000; }
         
-        .night-mode { background: var(--dark) !important; color: #fff !important; }
-        .night-mode .game-card, .night-mode #sidebar, .night-mode #chat-view { background: #2d3436 !important; border-color: #636e72; color: #fff !important; }
-        .night-mode .tile, .night-mode .user-tag, .night-mode .msg { background: #353b48 !important; border-color: #7f8c8d; color: #fff !important; }
-
-        #login-screen { position: fixed; inset: 0; background: var(--pink); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        #setup input { width: 100%; background: #000; color: #0f0; border: 1px solid #0a0; padding: 15px; font-size: 16px; text-align: center; margin-bottom: 10px; }
+        
+        @keyframes fadeOut { 0%, 90% { opacity: 1; } 100% { opacity: 0; } }
+        @keyframes shake { 0% { transform: translate(0); } 25% { transform: translate(2px); } 50% { transform: translate(-2px); } 100% { transform: translate(0); } }
     </style>
 </head>
 <body>
 
-<div id="top-banner">🍭 ROOM: <span id="room-code-tag">-</span> | <span id="now-user" style="color:var(--yellow)">대기</span>의 차례</div>
-
-<div id="wrapper">
-    <aside id="sidebar">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <span class="jua" style="font-size:16px;">👥 멤버 순서</span>
-            <button onclick="changeNickPrompt()" style="font-size:11px; padding:4px 8px;">닉네임 변경</button>
-        </div>
-        <div id="user-list"></div>
-        <div id="master-ctrl" style="display:none; margin-top:5px; padding-top:8px; border-top:3px solid #000;">
-            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:4px; margin-bottom:5px;">
-                <button onclick="setMode('dice')" style="font-size:11px;">🎲보드</button>
-                <button onclick="setMode('image')" style="font-size:11px;">🖼️지목</button>
-                <button onclick="setMode('vote')" style="font-size:11px;">🙋문답</button>
-                <button onclick="setMode('king')" style="font-size:11px;">👑왕</button>
-                <button onclick="setMode('shop')" style="font-size:11px;">🛍️쇼핑</button>
-                <button onclick="setMode('mafia')" style="font-size:11px;">🕵️마피아</button>
-            </div>
-            <button class="btn-b" onclick="nextTurn()" style="width:100%; margin-bottom:4px; font-size:12px;">⏩ 다음 순서 넘기기</button>
-            <button class="btn-r" onclick="fullReset()" style="width:100%; font-size:12px;">🧹 모든 기록/채팅 초기화</button>
-        </div>
-    </aside>
-
-    <main id="game-view">
-        <div class="game-card">
-            <section id="sec-dice" class="game-section active">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                    <h2 class="jua" style="font-size:20px;">🎲 주사위 보드</h2>
-                    <div id="dice-res" style="border:4px solid #000; width:50px; height:50px; display:flex; align-items:center; justify-content:center; border-radius:12px; font-weight:bold; background:var(--yellow); font-size:24px;">?</div>
-                    <button class="btn-y" onclick="rollDice()">주사위 굴리기</button>
-                </div>
-                <div id="board"></div>
-            </section>
-
-            <section id="sec-image" class="game-section">
-                <h2 class="jua" style="font-size:20px;">🖼️ 이미지 게임</h2>
-                <div id="img-topic-box" style="padding:20px; border:4px solid #000; border-radius:20px; background:var(--pink); text-align:center; margin:15px 0; font-weight:bold; font-size:18px;">주제 대기 중</div>
-                <div id="img-vote-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;"></div>
-                <div style="text-align:center; margin-top:10px;"><button class="btn-r" onclick="cancelVote()" id="btn-cancel-vote" style="display:none;">지목 취소 ❌</button></div>
-                <div id="master-img-panel" style="display:none; margin-top:15px;"><input type="text" id="img-in" placeholder="투표 주제..." style="width:65%;"><button class="btn-y" onclick="sendImgTopic()">배포</button><button class="btn-r" onclick="revealImgResult()">결과공개</button></div>
-            </section>
-
-            <section id="sec-vote" class="game-section">
-                <h2 class="jua" style="font-size:20px;">🙋 상황 문답</h2>
-                <div id="vote-topic" style="padding:15px; border:3px solid #000; border-radius:15px; background:var(--mint); margin-bottom:15px; font-weight:bold;">대기 중...</div>
-                <div id="ans-list" style="flex:1; overflow-y:auto; margin-bottom:10px; display:flex; flex-direction:column; gap:8px;"></div>
-                <div style="display:flex; gap:5px;"><input type="text" id="ans-in" style="flex:1;" placeholder="답변 입력..."><button class="btn-b" onclick="submitAns()">제출</button></div>
-                <div id="master-vote-panel" style="display:none; margin-top:10px;"><input type="text" id="topic-in" placeholder="상황 제시" style="width:75%"><button class="btn-y" onclick="sendTopic()">배포</button></div>
-            </section>
-
-            <section id="sec-king" class="game-section">
-                <h2 class="jua" style="font-size:20px;">👑 왕게임</h2>
-                <div id="king-display" style="text-align:center; padding:40px 20px;">
-                    <div class="jua" style="font-size:24px; color:var(--red); margin-bottom:10px;">현재의 왕</div>
-                    <div id="king-name" class="jua" style="font-size:40px; background:var(--yellow); display:inline-block; padding:10px 30px; border:4px solid #000; border-radius:20px;">-</div>
-                    <div id="king-cmd" class="jua" style="margin-top:30px; font-size:22px; line-height:1.5;">명령을 기다리는 중...</div>
-                </div>
-                <div id="master-king-panel" style="display:none; text-align:center;"><input type="text" id="king-in" placeholder="왕의 명령 입력" style="width:80%; margin-bottom:10px;"><br><button class="btn-b" onclick="sendKingCmd()">명령 하달하기</button></div>
-            </section>
-
-            <section id="sec-shop" class="game-section">
-                <h2 class="jua" style="font-size:20px;">🛍️ 블라인드 홈쇼핑</h2>
-                <div id="shop-view" class="jua" style="font-size:24px; padding:60px 20px; border:4px dashed #000; text-align:center; border-radius:30px; background:#fff; margin:20px 0;">?</div>
-                <div id="master-shop-panel" style="display:none; text-align:center;">
-                    <input type="text" id="shop-item-in" placeholder="판매 물건 비밀 설정" style="width:70%; margin-bottom:10px;"><br>
-                    <button class="btn-r" onclick="setShopItem()">물건 주입</button>
-                    <button class="btn-b" onclick="revealShop()">정체 공개!</button>
-                </div>
-            </section>
-
-            <section id="sec-mafia" class="game-section">
-                <h2 class="jua" id="mafia-state" style="font-size:24px;">☀️ 낮</h2>
-                <div id="my-job" class="jua" style="font-size:18px; margin:15px 0; color:var(--blue); text-align:center;">직업 확인 중...</div>
-                <div id="mafia-btns" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;"></div>
-                <div id="police-note" style="margin-top:15px; font-weight:bold; color:var(--red); text-align:center; font-size:15px;"></div>
-                <div id="master-mafia-panel" style="display:none; margin-top:20px; border-top:3px solid #000; padding-top:15px;">
-                    <button class="btn-r" onclick="assignJobs()" style="width:100%; margin-bottom:8px;">직업 무작위 배정</button>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-                        <button class="btn-b" onclick="toggleNight('night')">🌙 밤이 되었습니다</button>
-                        <button class="btn-y" onclick="processMafia()">☀️ 낮이 되었습니다</button>
-                    </div>
-                </div>
-            </section>
-        </div>
-    </main>
-
-    <aside id="chat-view">
-        <div id="messages"></div>
-        <div id="reply-preview" style="display:none; padding:8px; background:var(--gray); font-size:11px; position:relative; border-top:2px solid #000;">
-            <span id="reply-text"></span> <button onclick="cancelReply()" style="position:absolute; right:8px; top:4px;">X</button>
-        </div>
-        <div style="padding:10px; border-top:1px solid #eee; display:flex; gap:5px;">
-            <input type="text" id="chat-in" style="flex:1;" placeholder="메시지..." onkeypress="if(event.keyCode==13) sendChat()">
-            <button class="btn-b" onclick="sendChat()">전송</button>
-        </div>
-    </aside>
+<div id="status-bar">
+    <div>LAYER: <span id="area-val">1</span>/6</div>
+    <div>TIME: <span id="timer">900</span>s</div>
+    <div>INV: <span id="inv-val">0</span></div>
 </div>
 
-<div id="login-screen">
-    <div style="background:#fff; padding:35px; border-radius:35px; border:5px solid #000; width:100%; max-width:360px; text-align:center;">
-        <h1 class="jua" style="color:var(--pink); font-size:40px; margin-bottom:10px;">🍭 핑글글 V29</h1>
-        <p style="font-weight:bold; margin-bottom:20px; font-size:14px;">실시간 멀티 보드게임 플랫폼</p>
-        <input type="text" id="nick-in" placeholder="내 닉네임" style="width:100%; margin-bottom:8px;">
-        <input type="text" id="room-in" placeholder="방 코드 입력" style="width:100%; margin-bottom:20px;">
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-            <button class="btn-y" onclick="join('host')">방 만들기</button>
-            <button class="btn-b" onclick="join('member')">참여하기</button>
-        </div>
+<div id="log-container">
+    <div id="log">
+        <p class="critical" style="text-align:center;">[ 방탈출 ]</p>
+        <p>여섯 명의 지배자가 기다리는 지옥의 문이 열렸습니다. 
+        단서를 찾지 못하면 당신들은 보스의 영구적인 성노리개가 되어 육체가 해체될 것입니다.</p>
+        <p>함께 입장할 자들의 이름을 적으십시오 (최대 4명, 쉼표 구분).</p>
     </div>
 </div>
 
-<audio id="snd-bubble" src="https://assets.mixkit.co/active_storage/sfx/1999/1999-preview.mp3"></audio>
-<audio id="snd-click" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3"></audio>
+<div id="action-area">
+    <div id="setup">
+        <input type="text" id="name-input" placeholder="철수, 영희, 민수, 미나">
+        <button onclick="initGame()" style="width:100%; height:60px; font-size:18px;">피의 계약 및 입장</button>
+    </div>
+    <div id="controls" style="display:none;"></div>
+</div>
 
 <script>
-    const firebaseConfig = {
-        apiKey: "AIzaSyAe6e4W_pTEuW0Uh9yTY_i-34M9LDPowOg",
-        authDomain: "gamebbi.firebaseapp.com",
-        databaseURL: "https://gamebbi-default-rtdb.firebaseio.com",
-        projectId: "gamebbi",
-        storageBucket: "gamebbi.firebasestorage.app",
-        messagingSenderId: "949538355839",
-        appId: "1:949538355839:web:0aa1b91e9749de70e41d4a"
+    let players = [];
+    let inventory = [];
+    let timeLeft = 900;
+    let currentArea = 1;
+    let currentRoom = 1;
+    let areaCode = "";
+    let audioCtx = null;
+
+    // --- 스테이지 & 보스 데이터 (R19 스토리 포함) ---
+    const worldData = [
+        null,
+        {
+            name: "음탕한 무당 바리",
+            story: "마을 아이들의 안구를 뽑아 영생의 술을 빚던 무당. 지옥에서도 그 갈증을 풀기 위해 산 자의 체액을 탐합니다.",
+            intro: "깔깔! 싱싱한 구멍들이 제 발로 찾아왔구나. 너희의 비명으로 제단을 적셔주마.",
+            rooms: [
+                { d: "사당 입구: 썩은 시신들이 기괴한 교미 자세로 굳어있습니다.", opt: ["부적 조사", "시체 뒤지기"] },
+                { d: "피의 제단: 아이들의 머리카락으로 짠 밧줄이 당신들의 목을 노립니다.", opt: ["제단 수색", "주문 읽기"] },
+                { d: "무당의 침실: 음란한 향취가 진동하며 이성을 마비시킵니다.", opt: ["벽면 관찰", "서랍 열기"] }
+            ]
+        },
+        {
+            name: "심해의 창녀 세이렌",
+            story: "난파된 선원들을 유혹해 촉수로 온몸을 꿰뚫어 알을 낳는 심해의 괴물.",
+            intro: "바다보다 깊고 뜨거운 곳으로 안내해줄게. 내 촉수는 아주 자비가 없단다.",
+            rooms: [
+                { d: "젖은 복도: 벽면에서 끈적한 점액이 흘러나와 발을 묶습니다.", opt: ["점액 조사", "천장 보기"] },
+                { d: "산란실: 거대한 알들이 맥동하며 신음소리를 내고 있습니다.", opt: ["알 파괴", "부화 흔적 수색"] }
+            ]
+        },
+        {
+            name: "도살자 잭",
+            story: "고통 속에서 피어나는 쾌락을 즐기는 성도착증 살인마. 당신의 살점을 정교하게 발라내려 합니다.",
+            intro: "새로운 고기가 왔군. 껍질을 벗길 때 터져나올 네 핑크빛 속살이 기대되는걸?",
+            rooms: [
+                { d: "냉동 창고: 갈고리에 걸린 육체들이 정액과 피로 뒤범벅되어 있습니다.", opt: ["갈고리 조사", "바닥 수색"] },
+                { d: "해부실: 기괴한 성인 도구들과 수술용 칼들이 나열되어 있습니다.", opt: ["도구함 열기", "일지 읽기"] }
+            ]
+        },
+        { name: "몽마 릴리스", story: "꿈속에서 정기를 빨아먹고 껍데기만 남기는 여왕.", intro: "지옥의 쾌락이 어떤 건지 온몸으로 가르쳐줄게.", rooms: [{d: "안개의 방", opt: ["향로 조사", "거울 보기"]}] },
+        { name: "가죽 수집가 노페이스", story: "자신의 얼굴을 위해 타인의 안면과 성기를 도려내는 악귀.", intro: "네 매끄러운 피부... 내 옷으로 딱이겠어.", rooms: [{d: "가죽 건조실", opt: ["가죽 조사", "도구함 수색"]}] },
+        { name: "타락의 신 마더", story: "모든 악의 근원이자 지옥의 자궁. 당신들을 다시 태어나게(?) 할 것입니다.", intro: "내 안으로 들어오렴. 영원한 고통의 안식을 주마.", rooms: [{d: "자궁의 심부", opt: ["혈관 조사", "박동 청취"]}] }
+    ];
+
+    // --- 효과음 시스템 ---
+    function playSfx(f, type='sine', dur=0.3, vol=0.1) {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(f, audioCtx.currentTime);
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + dur);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + dur);
+    }
+
+    // --- 게임 진행 로직 ---
+    function addLog(msg, cls = '') {
+        const log = document.getElementById('log');
+        const p = document.createElement('p');
+        if (cls) p.className = cls;
+        p.innerHTML = `> ${msg}`;
+        log.appendChild(p);
+        document.getElementById('log-container').scrollTop = log.scrollHeight;
+    }
+
+    function initGame() {
+        const input = document.getElementById('name-input').value;
+        if (!input) return;
+        players = input.split(',').map(n => n.trim()).slice(0, 4);
+        document.getElementById('setup').style.display = 'none';
+        document.getElementById('controls').style.display = 'grid';
+        playSfx(150, 'square', 0.8);
+        startTimer();
+        loadArea();
+    }
+
+    function startTimer() {
+        setInterval(() => {
+            if(timeLeft > 0) {
+                timeLeft--;
+                document.getElementById('timer').innerText = timeLeft;
+                if(timeLeft <= 0) die("시간 초과. 당신들은 보스의 영원한 고기 인형이 되었습니다.");
+            }
+        }, 1000);
+    }
+
+    function loadArea() {
+        currentRoom = 1;
+        areaCode = Math.floor(1000 + Math.random() * 9000).toString();
+        document.getElementById('area-val').innerText = currentArea;
+        const data = worldData[currentArea];
+        addLog(`[제 ${currentArea}층: ${data.name}]`, 'critical');
+        addLog(data.story, 'story-text');
+        playSfx(50, 'sawtooth', 1.2, 0.2);
+        renderRoom();
+    }
+
+    function renderRoom() {
+        const stage = worldData[currentArea];
+        if (currentRoom <= stage.rooms.length) {
+            const roomData = stage.rooms[currentRoom - 1];
+            addLog(`방 ${currentRoom}: ${roomData.d}`);
+            const btns = roomData.opt.map(o => ({ t: o, f: "actionInvestigate" }));
+            updateButtons(btns);
+        } else {
+            addLog(`<span class="boss-msg">"${stage.intro}"</span>`, 'erotic');
+            updateButtons([
+                { t: "암호 기믹 풀기 (Escape)", f: "actionSolve" },
+                { t: "필사적 저항 (Battle)", f: "actionFight" },
+                { t: "몸을 바쳐 유혹 (Erotic)", f: "actionSubmit" }
+            ]);
+        }
+    }
+
+    // --- 액션 함수들 ---
+    window.actionInvestigate = () => {
+        const p = players[Math.floor(Math.random() * players.length)];
+        playSfx(600, 'sine', 0.2);
+        addLog(`${p}(이)가 주변을 샅샅이 뒤집니다...`);
+        
+        const rand = Math.random();
+        if (rand > 0.6) {
+            const hint = (rand > 0.8) ? `[${areaCode.substring(0,2)}XX]` : `[XX${areaCode.substring(2,4)}]`;
+            addLog(`피로 쓰인 숫자 발견: <span class="hint-box">${hint}</span> (3초 후 소멸)`, 'hint-info');
+            setTimeout(() => {
+                const hintElements = document.getElementsByClassName('hint-box');
+                if(hintElements.length > 0) hintElements[0].remove();
+            }, 3000);
+        } else if (rand > 0.3) {
+            const item = ["윤활제", "녹슨 칼", "마비 독침", "열쇠"][Math.floor(Math.random()*4)];
+            inventory.push(item);
+            addLog(`아이템 획득: [${item}]`);
+            document.getElementById('inv-val').innerText = inventory.length;
+        } else {
+            addLog(`조사 도중 보이지 않는 촉수가 ${p}의 허벅지를 훑고 지나갑니다!`, 'erotic');
+        }
+        currentRoom++;
+        setTimeout(renderRoom, 1000);
     };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
 
-    let roomRef, myNick, myKey, myRole, currentMode, turnOrder = [], replyTarget = null;
-    const userColors = ["#ffafcc", "#a2d2ff", "#ffde59", "#b9fbc0", "#ff4d4d", "#cdb4db", "#fb8500", "#00b4d8"];
-    const sndBubble = document.getElementById('snd-bubble');
-    const sndClick = document.getElementById('snd-click');
-
-    function join(role) {
-        myNick = document.getElementById('nick-in').value.trim();
-        let roomCode = document.getElementById('room-in').value.trim();
-        if(!myNick || !roomCode) return alert("닉네임과 방 코드를 입력해주세요!");
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('room-code-tag').innerText = roomCode;
-        roomRef = db.ref('rooms/' + roomCode);
-        
-        const userRef = roomRef.child('users').push();
-        myKey = userRef.key;
-        if(role === 'host') {
-            roomRef.update({ hostKey: myKey, currentGame: 'dice', turnIdx: 0, boardData: Array(19).fill("벌칙!").concat("🚩도착") });
-            initSortable();
+    window.actionSolve = () => {
+        const code = prompt("4자리 암호를 입력하십시오.");
+        if (code === areaCode) {
+            playSfx(1000, 'sine', 0.8);
+            addLog("기믹 해제! 보스가 비명을 지르며 쾌락 속에 소멸합니다.", 'critical');
+            nextStage();
+        } else {
+            playSfx(40, 'square', 1);
+            die("암호 실패. 보스가 당신들의 사지를 결박하고 강제로 유린을 시작합니다.");
         }
-        
-        userRef.update({ nick: myNick, pos: 0, dead: false, job: "시민", id: myKey, color: userColors[Math.floor(Math.random()*userColors.length)] });
-        userRef.onDisconnect().remove();
-        sendChat(`👋 [${myNick}]님이 입장하셨습니다.`, true);
-        listen();
-    }
+    };
 
-    function changeNickPrompt() {
-        const n = prompt("변경할 닉네임을 입력하세요:");
-        if(n && n.trim()) { roomRef.child('users').child(myKey).update({ nick: n.trim() }); myNick = n.trim(); sendChat(`✨ 닉네임 변경: [${n}]`, true); sndClick.play(); }
-    }
+    window.actionFight = () => {
+        let chance = 0.4 + (inventory.length * 0.1);
+        if (Math.random() < chance) {
+            addLog("처절한 혈투 끝에 보스의 심장을 꿰뚫었습니다!", 'critical');
+            nextStage();
+        } else {
+            const p = players[Math.floor(Math.random() * players.length)];
+            addLog(`${p}(이)가 보스에게 제압당해 노골적인 가학을 당합니다!`, 'erotic');
+            timeLeft -= 150;
+            playSfx(80, 'sawtooth', 1);
+        }
+    };
 
-    function initSortable() {
-        new Sortable(document.getElementById('user-list'), {
-            animation: 150, onEnd: () => {
-                const newOrder = Array.from(document.querySelectorAll('.user-tag')).map(el => el.dataset.key);
-                roomRef.update({ order: newOrder });
-            }
-        });
-    }
+    window.actionSubmit = () => {
+        addLog("보스에게 굴복하여 옷을 벗고 몸을 바칩니다...", 'erotic');
+        if (Math.random() > 0.6) {
+            addLog("보스가 당신들의 신음과 봉사에 만족하여 길을 열어줍니다.");
+            nextStage();
+        } else {
+            die("보스는 당신들을 단순한 고기 인형으로 사용한 뒤 폐기했습니다.");
+        }
+    };
 
-    function listen() {
-        roomRef.on('value', snap => {
-            const d = snap.val(); if(!d) return;
-            const isMaster = d.hostKey === myKey;
-            document.getElementById('master-ctrl').style.display = isMaster ? 'block' : 'none';
-            document.querySelectorAll('[id*="master-"]').forEach(el => el.style.display = isMaster ? 'block' : 'none');
-
-            if(currentMode !== d.currentGame) {
-                currentMode = d.currentGame;
-                document.querySelectorAll('.game-section').forEach(s => s.classList.remove('active'));
-                document.getElementById('sec-' + currentMode).classList.add('active');
-            }
-            if(d.users) {
-                turnOrder = d.order || Object.keys(d.users);
-                const activeKey = turnOrder[d.turnIdx || 0];
-                const activeNick = d.users[activeKey]?.nick || "대기";
-                document.getElementById('now-user').innerText = activeNick;
-                renderUsers(d.users, d.turnIdx, d.hostKey);
-                if(currentMode === 'dice') renderBoard(d.users, d.boardData, activeKey, isMaster);
-                if(currentMode === 'vote') renderAnsList(d.answers || {}, activeNick, d.bestAns);
-                if(currentMode === 'image') renderImgVotes(turnOrder, d.votes || {}, d.imgReveal, d.users);
-                if(currentMode === 'mafia') renderMafiaBtns(d.users[myKey], Object.values(d.users), d.isNight);
-                document.getElementById('king-name').innerText = activeNick;
-                document.getElementById('king-cmd').innerText = d.kingCmd || "명령을 기다리는 중...";
-                document.getElementById('my-job').innerText = `내 직업: [${d.users[myKey]?.job}]` + (d.users[myKey]?.dead ? " (사망/회색)" : "");
-                if(d.shopReveal) document.getElementById('shop-view').innerHTML = d.shopReveal;
-                else document.getElementById('shop-view').innerText = "?";
-            }
-            document.body.className = d.isNight ? "night-mode" : "";
-            document.getElementById('mafia-state').innerText = d.isNight ? "🌙 밤" : "☀️ 낮";
-            document.getElementById('dice-res').innerText = d.diceRes || "?";
-            document.getElementById('vote-topic').innerText = d.voteTopic || "상황 대기 중...";
-            document.getElementById('img-topic-box').innerText = d.imgTopic ? `[${d.imgTopic}]인 사람?` : "주제 대기 중";
-            document.getElementById('btn-cancel-vote').style.display = (d.votes && d.votes[myKey] && !d.imgReveal) ? 'inline-block' : 'none';
-        });
-
-        roomRef.child('chat').limitToLast(20).on('value', snap => {
-            const area = document.getElementById('messages'); area.innerHTML = "";
-            if(snap.val()) Object.entries(snap.val()).forEach(([id, m]) => {
-                const dv = document.createElement('div'); dv.className = `msg ${m.system?'sys':''}`;
-                dv.style.alignSelf = m.nick === myNick ? 'flex-end' : 'flex-start';
-                let content = (m.system?'':`<b onclick="setReply('${m.nick}','${m.text}')" style="color:var(--blue); cursor:pointer;">${m.nick}</b><br>`);
-                if(m.replyTo) content += `<div style="font-size:10px; opacity:0.6; border-left:2px solid #ccc; padding-left:4px; margin-bottom:3px;">↩️ ${m.replyTo.nick}: ${m.replyTo.text.substring(0,10)}..</div>`;
-                dv.innerHTML = content + m.text; area.appendChild(dv);
-            });
-            area.scrollTop = area.scrollHeight;
-        });
-    }
-
-    function renderUsers(userObj, activeIdx, hKey) {
-        const area = document.getElementById('user-list'); area.innerHTML = "";
-        turnOrder.forEach((key, i) => {
-            const u = userObj[key]; if(!u) return;
-            const dv = document.createElement('div');
-            dv.className = `user-tag ${i === activeIdx ? 'active-turn' : ''} ${u.dead ? 'is-dead' : ''}`;
-            dv.dataset.key = key;
-            dv.innerHTML = `<div style="width:12px;height:12px;border-radius:50%;background:${u.color};border:2px solid #000;"></div> <b>${u.nick}</b> ${key===hKey?'👑':''}`;
-            if(myKey === hKey && key !== myKey) {
-                const bBox = document.createElement('div'); bBox.style="margin-left:auto; display:flex; gap:3px;";
-                const dBtn = document.createElement('button'); dBtn.innerText = u.dead ? "복구" : "해고"; dBtn.style="font-size:9px; padding:3px 6px;";
-                dBtn.onclick = (e) => { e.stopPropagation(); roomRef.child('users').child(key).update({ dead: !u.dead }); sndClick.play(); };
-                const kBtn = document.createElement('button'); kBtn.innerText = "강퇴"; kBtn.className="btn-r"; kBtn.style="font-size:9px; padding:3px 6px;";
-                kBtn.onclick = (e) => { e.stopPropagation(); if(confirm("강퇴하시겠습니까?")) roomRef.child('users').child(key).remove(); };
-                bBox.append(dBtn, kBtn); dv.appendChild(bBox);
-            }
-            area.appendChild(dv);
-        });
-    }
-
-    function renderBoard(userObj, bData, activeKey, isMaster) {
-        const area = document.getElementById('board'); area.innerHTML = "";
-        (bData || Array(20).fill("벌칙")).forEach((text, i) => {
-            const tile = document.createElement('div'); tile.className = "tile";
-            tile.innerHTML = `<div style="font-size:13px;">${text}</div><span style="position:absolute;top:2px;left:4px;opacity:0.3;font-size:9px;">${i+1}</span>`;
-            const pCont = document.createElement('div'); pCont.className = "piece-container";
-            Object.values(userObj).filter(u => u.pos === i && !u.dead).forEach(u => {
-                const p = document.createElement('div'); p.className = "piece"; p.style.background = u.color;
-                p.innerHTML = `<div class="piece-name">${u.nick}</div>`;
-                pCont.appendChild(p);
-            });
-            tile.appendChild(pCont);
-            tile.onclick = () => {
-                if(isMaster) {
-                    const actNick = userObj[activeKey]?.nick || "현재 턴 유저";
-                    if(confirm(`[${actNick}]님을 이 칸으로 강제 이동시킬까요?`)) { 
-                        roomRef.child('users').child(activeKey).update({ pos: i }); 
-                        sendChat(`📢 마스터가 [${actNick}]님을 ${i+1}번 칸으로 소환했습니다.`, true);
-                    } else { 
-                        const nt = prompt("칸 내용 수정:", text); if(nt) { bData[i]=nt; roomRef.update({boardData:bData}); } 
-                    }
-                }
-            };
-            area.appendChild(tile);
-        });
-    }
-
-    function rollDice() {
-        const v = Math.floor(Math.random()*6)+1;
-        roomRef.update({ diceRes: v });
-        roomRef.child('users').child(myKey).once('value', s => {
-            if(s.val() && !s.val().dead) {
-                const nPos = Math.min(s.val().pos + v, 19);
-                roomRef.child('users').child(myKey).update({ pos: nPos });
-                sendChat(`🎲 [${myNick}] 주사위 [${v}]! (${nPos+1}번 칸 도착)`, true);
-            }
-        });
-        sndBubble.play();
-    }
-
-    function sendChat(t, sys=false) {
-        const txt = t || document.getElementById('chat-in').value;
-        if(txt) {
-            const msgData = { nick: myNick, text: txt, system: sys };
-            if(!sys && replyTarget) { msgData.replyTo = replyTarget; cancelReply(); }
-            roomRef.child('chat').push(msgData); document.getElementById('chat-in').value="";
+    function nextStage() {
+        if (currentArea < 6) {
+            currentArea++;
+            setTimeout(loadArea, 1500);
+        } else {
+            win();
         }
     }
-    function setReply(nick, text) { replyTarget={nick,text}; document.getElementById('reply-preview').style.display='block'; document.getElementById('reply-text').innerText=`${nick}에게 답글 중..`; }
-    function cancelReply() { replyTarget=null; document.getElementById('reply-preview').style.display='none'; }
-    
-    function setMode(m) { roomRef.update({ currentGame: m, votes: {}, answers: {}, bestAns: "", kingCmd: "", shopReveal: "", hiddenItem: "" }); sndClick.play(); }
-    function nextTurn() { roomRef.once('value', s => { roomRef.update({ turnIdx: (s.val().turnIdx + 1) % turnOrder.length, answers: {}, bestAns: "", votes: {}, imgReveal: false }); }); sndClick.play(); }
-    function fullReset() { if(confirm("모든 채팅과 게임 내역을 리셋할까요?")) { roomRef.update({chat:{}, answers:{}, votes:{}, diceRes:"?", isNight:false, kingCmd:"", shopReveal:"", hiddenItem:""}); roomRef.child('users').once('value', s=>s.forEach(u=>roomRef.child('users').child(u.key).update({pos:0, dead:false}))); sendChat("🧹 시스템: 방장이 모든 내역을 초기화했습니다.", true); sndClick.play(); } }
-    
-    // 상황문답
-    function submitAns() { const t = document.getElementById('ans-in').value; if(t) { roomRef.child('answers').child(myNick).set({ text: t, reply: "" }); document.getElementById('ans-in').value=""; sndClick.play(); } }
-    function sendTopic() { roomRef.update({ voteTopic: document.getElementById('topic-in').value, answers: {}, bestAns: "" }); sndClick.play(); }
-    function renderAnsList(ans, king, best) {
-        const area = document.getElementById('ans-list'); area.innerHTML = "";
-        Object.entries(ans).forEach(([nick, data]) => {
-            const dv = document.createElement('div'); dv.style = `padding:10px; background:#fff; border:2.5px solid ${nick===best?'var(--pink)':'#eee'}; border-radius:15px; position:relative; font-size:13px;`;
-            dv.innerHTML = `<b>${nick}:</b> ${data.text}`;
-            if(data.reply) dv.innerHTML += `<div style="background:var(--yellow); padding:5px; border-radius:8px; margin-top:5px; font-size:11px; border:1px solid #000;">👑 왕의 답글: ${data.reply}</div>`;
-            if(myNick === king) {
-                const rBtn = document.createElement('button'); rBtn.innerText="💬"; rBtn.style="position:absolute;right:45px;top:5px;padding:3px;";
-                rBtn.onclick=()=> { const r = prompt("답글을 입력하세요:"); if(r) roomRef.child('answers').child(nick).update({ reply: r }); };
-                const vBtn = document.createElement('button'); vBtn.innerText="🏆"; vBtn.style="position:absolute;right:8px;top:5px;padding:3px;";
-                vBtn.onclick=()=> { roomRef.update({ bestAns: nick }); sendChat(`🏆 [${king}]왕의 선택: [${nick}]님!`, true); };
-                dv.append(rBtn, vBtn);
-            }
-            area.appendChild(dv);
+
+    function updateButtons(btns) {
+        const ctrl = document.getElementById('controls');
+        ctrl.innerHTML = '';
+        btns.forEach(b => {
+            const btn = document.createElement('button');
+            btn.innerText = b.t;
+            btn.onclick = () => { window[b.f](); };
+            ctrl.appendChild(btn);
         });
     }
 
-    // 이미지 게임
-    function renderImgVotes(order, votes, revealed, userObj) {
-        const area = document.getElementById('img-vote-grid'); area.innerHTML = "";
-        order.forEach(key => {
-            const u = userObj[key]; if(!u || u.dead) return;
-            const count = Object.values(votes).filter(v => v === key).length;
-            const btn = document.createElement('button'); btn.className = "btn-y"; btn.style="font-size:13px;";
-            btn.innerHTML = `${u.nick} ${revealed ? `(${count})` : ''}`;
-            btn.onclick = () => { if(!revealed) { roomRef.child('votes').child(myKey).set(key); sndBubble.play(); } };
-            area.appendChild(btn);
-        });
+    function die(msg) {
+        document.body.innerHTML = `<div style="color:red; text-align:center; padding-top:100px; background:#000; height:100vh;">
+            <h1 class="critical" style="font-size:30px;">DEATH END</h1><p>${msg}</p>
+            <button onclick="location.reload()" style="margin-top:40px; width:200px; height:50px;">영혼 재생성</button></div>`;
     }
-    function cancelVote() { roomRef.child('votes').child(myKey).remove(); sndClick.play(); }
-    function sendImgTopic() { roomRef.update({ imgTopic: document.getElementById('img-in').value, votes: {}, imgReveal: false }); sndClick.play(); }
-    function revealImgResult() { roomRef.update({ imgReveal: true }); sndBubble.play(); }
 
-    // 왕게임 / 홈쇼핑
-    function sendKingCmd() { roomRef.update({ kingCmd: document.getElementById('king-in').value }); sndClick.play(); }
-    function setShopItem() { roomRef.update({ hiddenItem: document.getElementById('shop-item-in').value, shopReveal: "📦 물건이 도착했습니다! 뭔지 모른 채 장사하세요!" }); sndClick.play(); }
-    function revealShop() { roomRef.once('value', s => { roomRef.update({ shopReveal: `📢 물건의 정체:<br><b style="color:var(--red); font-size:30px;">"${s.val().hiddenItem}"</b>` }); sndBubble.play(); }); }
-
-    // 마피아
-    function assignJobs() { 
-        const j = prompt("직업군 입력(콤마로 구분):", "마피아,의사,경찰,시민,시민").split(',');
-        roomRef.child('users').once('value', s => { let i=0; s.forEach(u => roomRef.child('users').child(u.key).update({ job: j[i++]||"시민", dead: false })); });
-    }
-    function toggleNight(type) { if(type==='night') { roomRef.update({ isNight: true, mafiaKill: "", doctorSave: "" }); sendChat("🌙 밤이 되었습니다. 능력을 사용하세요.", true); } sndClick.play(); }
-    function renderMafiaBtns(me, users, night) {
-        const area = document.getElementById('mafia-btns'); area.innerHTML = "";
-        if(!night || !me || me.dead) return;
-        users.filter(u => !u.dead && u.id !== myKey).forEach(u => {
-            const b = document.createElement('button'); b.className = "btn-b"; b.style="font-size:12px;";
-            if(me.job==='마피아') { b.innerText=`처단: ${u.nick}`; b.onclick=()=> { roomRef.update({mafiaKill:u.id}); alert(u.nick+" 선택"); } }
-            else if(me.job==='경찰') { b.innerText=`조사: ${u.nick}`; b.onclick=()=> document.getElementById('police-note').innerText = `[${u.nick}]님은 ${u.job==='마피아'?'🚨마피아':'✅시민'}입니다.`; }
-            else if(me.job==='의사') { b.innerText=`치료: ${u.nick}`; b.onclick=()=> { roomRef.update({doctorSave:u.id}); alert(u.nick+" 치료"); } }
-            if(b.innerText) area.appendChild(b);
-        });
-    }
-    function processMafia() {
-        roomRef.once('value', s => { const d = s.val(); 
-            let msg = "☀️ 낮이 되었습니다. ";
-            if(d.mafiaKill && d.mafiaKill !== d.doctorSave) { roomRef.child('users').child(d.mafiaKill).update({ dead: true }); msg += `[${d.users[d.mafiaKill].nick}]님이 처단되었습니다.`; }
-            else msg += "지난 밤에는 평화로웠습니다.";
-            sendChat(msg, true); roomRef.update({ isNight: false }); sndBubble.play();
-        });
+    function win() {
+        document.body.innerHTML = `<div style="color:#0f0; text-align:center; padding-top:100px; background:#000; height:100vh;">
+            <h1 style="font-size:30px;">CONQUEROR</h1><p>지옥의 6층을 모두 정복하고 생존했습니다.</p></div>`;
     }
 </script>
 </body>
